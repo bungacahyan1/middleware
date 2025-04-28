@@ -28,7 +28,7 @@ async function fetchLangflow(messageContent) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': 'Bearer ${process.env.LANGFLOW_API_TOKEN}'
+            'Authorization': Bearer ${process.env.LANGFLOW_API_TOKEN}
         },
         body: JSON.stringify(payload)
     };
