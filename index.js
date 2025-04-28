@@ -3,32 +3,41 @@ const fetch = require('node-fetch');
 const express = require('express');
 require('dotenv').config();
 
+// Setup Express untuk keep-alive server
 const app = express();
-const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
+const PORT = process.env.PORT || 3000;
 
-// Keep-alive server
 app.get('/', (req, res) => {
     res.send('Bot is alive!');
 });
 
-app.listen(3000, () => {
-    console.log('✅ Keep-alive server running on port 3000');
+app.listen(PORT, () => {
+    console.log(`✅ Server running on port ${PORT}`);
 });
 
-// Fungsi untuk mengirim pesan ke Langflow
+// Setup Discord client
+const client = new Client({
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent
+    ]
+});
+
+// Fungsi untuk fetch ke Langflow
 async function fetchLangflow(messageContent) {
     const payload = {
         input_value: messageContent,
         output_type: "chat",
         input_type: "chat",
-        session_id: "user_1"
+        session_id: "shaquille"
     };
 
     const options = {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': 'Bearer ${process.env.LANGFLOW_API_TOKEN}'
+            'Authorization': `Bearer ${process.env.LANGFLOW_API_TOKEN}`
         },
         body: JSON.stringify(payload)
     };
@@ -36,31 +45,38 @@ async function fetchLangflow(messageContent) {
     try {
         const response = await fetch('https://api.langflow.astra.datastax.com/lf/0b2a2275-fa16-46b5-9507-98d0e3edf12b/api/v1/run/48b90162-14a1-482d-bffc-af1b5fad1497', options);
         if (!response.ok) {
-            throw new Error(HTTP error! status: ${response.status});
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
         return await response.json();
     } catch (error) {
         console.error("❌ Gagal mengambil data dari Langflow:", error);
-        throw error;
+        return { error: true };
     }
 }
 
-// Saat bot siap
+// Event saat bot ready
 client.once('ready', () => {
-    console.log(✅ Bot ready sebagai ${client.user.tag});
+    console.log(`✅ Bot ready sebagai ${client.user.tag}`);
 });
 
-// Saat pesan dikirim
+// Event saat pesan dibuat
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
 
-    // Cek apakah bot di-mention
+    // Cek kalau bot di-mention
     const isMentioned = message.mentions.has(client.user);
+    if (!isMentioned) return;
 
-    if (!isMentioned) return; // Kalau tidak mention bot, jangan balas
+    console.log(`💬 Pesan dari ${message.author.tag}: ${message.content}`);
 
     try {
         const result = await fetchLangflow(message.content);
+
+        if (result.error) {
+            await message.reply("⚠️ Bot mengalami kesulitan menjawab, coba lagi nanti.");
+            return;
+        }
+
         let reply = "⚠️ Langflow tidak memberikan respons.";
 
         if (
@@ -86,11 +102,10 @@ client.on('messageCreate', async (message) => {
 
         await message.reply(reply);
     } catch (error) {
-        console.error("❌ Gagal menghubungi Langflow:", error);
-        await message.reply("⚠️ Terjadi kesalahan saat menghubungi Langflow.");
+        console.error("❌ Error saat membalas:", error);
+        await message.reply("⚠️ Terjadi kesalahan saat memproses pesan.");
     }
 });
 
-
-// Jalankan bot
+// Login ke Discord
 client.login(process.env.DISCORD_BOT_TOKEN);
