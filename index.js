@@ -10,16 +10,9 @@ const client = new Client({
   ],
 });
 
-client.on('ready', async () => {
+client.on('ready', () => {
   console.log(`🤖 Bot is ready! Logged in as ${client.user.tag}`);
-  // Test webhook reachability
   console.log('N8N_WEBHOOK_URL:', process.env.N8N_WEBHOOK_URL);
-  try {
-    await axios.get(process.env.N8N_WEBHOOK_URL);
-    console.log('✅ N8N webhook is reachable');
-  } catch (err) {
-    console.error('❌ N8N webhook unreachable:', err.message);
-  }
 });
 
 client.on('messageCreate', async (message) => {
@@ -37,8 +30,6 @@ client.on('messageCreate', async (message) => {
       {
         headers: {
           'Content-Type': 'application/json',
-          // Add Authorization if required by n8n
-          // Authorization: `Bearer ${process.env.N8N_AUTH_TOKEN}`,
         },
       }
     );
@@ -48,7 +39,6 @@ client.on('messageCreate', async (message) => {
   }
 });
 
-// Validate and login
 const token = process.env.DISCORD_BOT_TOKEN;
 if (!token) {
   console.error('❌ DISCORD_BOT_TOKEN is not set');
